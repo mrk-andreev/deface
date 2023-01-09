@@ -1,0 +1,44 @@
+service: telegram-bot-receiver
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: dev
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action: 'sqs:SendMessage'
+      Resource: 'arn:aws:sqs:*:*:${param:QUEUE_NAME}'
+      Sid: 'AllowSendMessageToSQS'
+    - Effect: Allow
+      Action: 'sqs:GetQueueUrl'
+      Resource: 'arn:aws:sqs:*:*:${param:QUEUE_NAME}'
+      Sid: 'AllowGetQueryUrlFromSQS'
+
+
+functions:
+  deface_receiver:
+    handler: handler.handle
+    memorySize: 128
+    environment:
+      TOKEN: ${param:TOKEN}
+      QUEUE_NAME: ${param:QUEUE_NAME}
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: receive
+          method: post
+          cors: true
+
+custom:
+  pythonRequirements:
+    layer: true
+    zip: true
+    slim: true
+    useDownloadCache: true
+
+plugins:
+  - serverless-lift
+  - serverless-python-requirements
